@@ -1,0 +1,142 @@
+#define STB_IMAGE_IMPLEMENTATION  // stb_image.h의 구현을 포함시키기 위한 정의
+#include "stb_image.h"
+#include <SDL.h>
+#include <stdio.h>
+
+int main(int argc, char* argv[]) {
+    // SDL 초기화
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        printf("SDL_Init Error: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // 윈도우 생성
+    SDL_Window* window = SDL_CreateWindow("Image Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
+    if (!window) {
+        printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    // 렌더러 생성
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) {
+        printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // 첫 번째 이미지 경로 (PNG)
+    const char* imagePathPNG = "jcshim.png";
+    int widthPNG, heightPNG, channelsPNG;
+    unsigned char* imgDataPNG = stbi_load(imagePathPNG, &widthPNG, &heightPNG, &channelsPNG, 0);
+    if (!imgDataPNG) {
+        printf("Error loading image: %s\n", imagePathPNG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // 두 번째 이미지 경로 (JPG)
+    const char* imagePathJPG = "jcshim.jpg";
+    int widthJPG, heightJPG, channelsJPG;
+    unsigned char* imgDataJPG = stbi_load(imagePathJPG, &widthJPG, &heightJPG, &channelsJPG, 0);
+    if (!imgDataJPG) {
+        printf("Error loading image: %s\n", imagePathJPG);
+        stbi_image_free(imgDataPNG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // SDL_Surface로 변환 (PNG)
+    SDL_Surface* surfacePNG = SDL_CreateRGBSurfaceFrom(imgDataPNG, widthPNG, heightPNG, channelsPNG * 8, widthPNG * channelsPNG, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    if (!surfacePNG) {
+        printf("SDL_CreateRGBSurfaceFrom Error: %s\n", SDL_GetError());
+        stbi_image_free(imgDataPNG);
+        stbi_image_free(imgDataJPG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // SDL_Texture로 변환 (PNG)
+    SDL_Texture* texturePNG = SDL_CreateTextureFromSurface(renderer, surfacePNG);
+    SDL_FreeSurface(surfacePNG);  // Surface는 더 이상 필요없음
+    if (!texturePNG) {
+        printf("SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+        stbi_image_free(imgDataPNG);
+        stbi_image_free(imgDataJPG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // SDL_Surface로 변환 (JPG)
+    SDL_Surface* surfaceJPG = SDL_CreateRGBSurfaceFrom(imgDataJPG, widthJPG, heightJPG, channelsJPG * 8, widthJPG * channelsJPG, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    if (!surfaceJPG) {
+        printf("SDL_CreateRGBSurfaceFrom Error: %s\n", SDL_GetError());
+        stbi_image_free(imgDataPNG);
+        stbi_image_free(imgDataJPG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // SDL_Texture로 변환 (JPG)
+    SDL_Texture* textureJPG = SDL_CreateTextureFromSurface(renderer, surfaceJPG);
+    SDL_FreeSurface(surfaceJPG);  // Surface는 더 이상 필요없음
+    if (!textureJPG) {
+        printf("SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+        stbi_image_free(imgDataPNG);
+        stbi_image_free(imgDataJPG);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // SDL 이벤트 루프 시작
+    SDL_Event e;
+    int quit = 0;
+
+    while (!quit) {
+        // 이벤트 처리
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                quit = 1;  // 창을 닫으면 종료
+            }
+        }
+
+        // 화면 지우기
+        SDL_RenderClear(renderer);
+
+        // 첫 번째 이미지 (PNG)
+        SDL_Rect destRectPNG = { 50, 50, widthPNG, heightPNG };  // 위치 (50, 50)로 설정
+        SDL_RenderCopy(renderer, texturePNG, NULL, &destRectPNG);
+
+        // 두 번째 이미지 (JPG)
+        SDL_Rect destRectJPG = { 400, 50, widthJPG, heightJPG };  // 위치 (400, 50)로 설정
+        SDL_RenderCopy(renderer, textureJPG, NULL, &destRectJPG);
+
+        // 화면에 이미지 업데이트
+        SDL_RenderPresent(renderer);
+    }
+
+    // 리소스 해제
+    SDL_DestroyTexture(texturePNG);
+    SDL_DestroyTexture(textureJPG);
+    stbi_image_free(imgDataPNG);
+    stbi_image_free(imgDataJPG);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+    return 0;
+}
